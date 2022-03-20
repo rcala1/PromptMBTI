@@ -1,1 +1,3 @@
-# PromptMBTI_Masters
+# PromptMBTI Masters
+
+Repository for Masters degree project
