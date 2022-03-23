@@ -132,3 +132,4 @@ dmypy.json
 /datasets
 /filtered
 /models
+/dummy_files
