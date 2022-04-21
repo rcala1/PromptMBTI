@@ -2,12 +2,16 @@ import pandas as pd
 from tqdm import tqdm
 from dataset import TRAITS
 
-CURR_TRAIT = 0
+CURR_TRAIT = 3
 
 PROMPT_LABELS = ["introverted", "intuitive", "thinking", "perceiving"]
 PROMPT_OPPOSITE_LABELS = ["extroverted", "sensing", "feeling", "judging"]
 
-path = "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_" + TRAITS[CURR_TRAIT] + ".csv"
+path = (
+    "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
+    + TRAITS[CURR_TRAIT]
+    + ".csv"
+)
 original_path = (
     "/home/rcala/PromptMBTI_Masters/datasets/filtered_comments_with_"
     + TRAITS[CURR_TRAIT]

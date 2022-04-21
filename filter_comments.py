@@ -7,7 +7,9 @@ from collections import Counter
 from nltk.corpus import stopwords
 
 PATH_DATASET = "/home/rcala/PromptMBTI_Masters/datasets/all_comments_with_mbti.csv"
-DESTINATION_PATH = "/home/rcala/PromptMBTI_Masters/datasets/filtered_comments_with_mbti.csv"
+DESTINATION_PATH = (
+    "/home/rcala/PromptMBTI_Masters/datasets/filtered_comments_with_mbti.csv"
+)
 
 MIN_LENGTH = 5
 MAX_LENGTH = 256
@@ -22,7 +24,7 @@ reddit_generic_sequences = [
     "^^^^^^^",
 ]
 
-eng_stopwords_dict = Counter(stopwords.words('english'))
+eng_stopwords_dict = Counter(stopwords.words("english"))
 all_comments_with_mbti = pd.read_csv(PATH_DATASET, usecols=["body"] + TRAITS)
 texts = list(all_comments_with_mbti["body"])
 introverted = list(all_comments_with_mbti[TRAITS[0]])
@@ -45,7 +47,7 @@ filtered_items = filtered_from_length_items
 # generic
 filtered_from_generic_items = []
 for item in tqdm(filtered_items):
-    
+
     contains = False
     for sequence in reddit_generic_sequences:
         if sequence in item[0]:

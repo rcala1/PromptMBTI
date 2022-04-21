@@ -15,17 +15,17 @@ from transformers import (
 from torch.nn import DataParallel
 from tqdm import tqdm
 
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 from dataset import TRAITS
 from dataset import prepare_classic_mbti_splits
 from pytorchtools import EarlyStopping
 
-CURR_TRAIT = 0
-FEW = False
+CURR_TRAIT = 3
+FEW = True
 
 PATH_DATASET = (
-    "/home/rcala/PsromptMBTI_Masters/filtered/bert_filtered_"
+    "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
     + TRAITS[CURR_TRAIT]
     + "_discrete"
     + ".csv"
@@ -34,14 +34,22 @@ GPT2_MODEL_PATH = "gpt2"
 
 if not FEW:
     GPT2_SAVE_PATH = (
-        "/home/rcala/PromptMBTI_Masters/models/" + "gpt2" + "_" + TRAITS[CURR_TRAIT] + "_classic_1e-5"
+        "/home/rcala/PromptMBTI_Masters/models/"
+        + "gpt2"
+        + "_"
+        + TRAITS[CURR_TRAIT]
+        + "_classic"
     )
 else:
     GPT2_SAVE_PATH = (
-        "/home/rcala/PromptMBTI_Masters/models/" + "gpt2" + "_" + TRAITS[CURR_TRAIT] + "_classic_few"
+        "/home/rcala/PromptMBTI_Masters/models/"
+        + "gpt2"
+        + "_"
+        + TRAITS[CURR_TRAIT]
+        + "_classic_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -49,10 +57,12 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-torch.manual_seed(123)
-set_seed(123)
-np.random.seed(123)
-random.seed(123)
+random_seed = 1
+
+torch.manual_seed(random_seed)
+set_seed(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
 
 model_config = GPT2Config.from_pretrained(
     pretrained_model_name_or_path=GPT2_MODEL_PATH, num_labels=2
@@ -68,9 +78,9 @@ model.resize_token_embeddings(len(tokenizer))
 model.config.pad_token_id = model.config.eos_token_id
 model.to(dev)
 
-earlystopping = EarlyStopping(patience=2, path=GPT2_SAVE_PATH)
-optimizer = AdamW(model.parameters(), lr=1e-5)
-epochs = 6
+earlystopping = EarlyStopping(patience=5, path=GPT2_SAVE_PATH)
+optimizer = AdamW(model.parameters(), lr=2e-5)
+epochs = 100
 batch_size = 2
 
 train_loader, val_loader, test_loader = prepare_classic_mbti_splits(
@@ -79,9 +89,7 @@ train_loader, val_loader, test_loader = prepare_classic_mbti_splits(
 
 total_steps = len(train_loader) * epochs
 scheduler = get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps=0,
-    num_training_steps=total_steps,
+    optimizer, num_warmup_steps=0, num_training_steps=total_steps,
 )
 
 for epoch in range(epochs):
@@ -107,15 +115,12 @@ for epoch in range(epochs):
 
         all_pred += list(prediction.cpu().detach().numpy().argmax(axis=1))
         all_true += list(inputs["labels"].cpu().detach().numpy())
-        #torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
         tqdm_train.set_description(
-            "Epoch {}, Train batch_loss: {}".format(
-                epoch + 1,
-                loss.item(),
-            )
+            "Epoch {}, Train batch_loss: {}".format(epoch + 1, loss.item(),)
         )
-        
+
         scheduler.step()
 
     train_acc = accuracy_score(all_true, all_pred)
@@ -149,7 +154,7 @@ for epoch in range(epochs):
     print(f"Epoch {epoch+1}")
     print(f"Train_acc: {train_acc:.4f} Train_f1: {train_f1:.4f}")
     print(f"Val_acc: {val_acc:.4f} Val_f1: {val_f1:.4f}")
-    earlystopping(-val_acc, model, tokenizer)
+    earlystopping(-val_f1, model, tokenizer)
     print()
     if earlystopping.early_stop == True:
         break

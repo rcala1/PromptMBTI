@@ -15,15 +15,15 @@ from transformers import (
 from torch.nn import DataParallel
 from tqdm import tqdm
 
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 from dataset import prepare_filter_splits
 from dataset import TRAITS
 from pytorchtools import EarlyStopping
 
 BERT_TINY_PATH = "/home/rcala/PromptMBTI_Masters/models/General_TinyBERT_4L_312D/"
-CURR_TRAIT = 1
-IDX_SPLIT = 1
+CURR_TRAIT = 3
+IDX_SPLIT = 3
 BERT_SAVE_PATH = (
     "/home/rcala/PromptMBTI_Masters/models/"
     + "bert"
@@ -55,7 +55,9 @@ random.seed(123)
 model_config = BertConfig.from_pretrained(
     pretrained_model_name_or_path=BERT_TINY_PATH, num_labels=2,
 )
-model = BertForSequenceClassification.from_pretrained(BERT_TINY_PATH, config=model_config)
+model = BertForSequenceClassification.from_pretrained(
+    BERT_TINY_PATH, config=model_config
+)
 tokenizer = BertTokenizer.from_pretrained(BERT_TINY_PATH, do_lower_case=True)
 
 model = model.to(dev)
@@ -75,9 +77,7 @@ train_loader, val_loader, test_loader = prepare_filter_splits(
 
 total_steps = len(train_loader) * epochs
 scheduler = get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps=0,
-    num_training_steps=total_steps,
+    optimizer, num_warmup_steps=0, num_training_steps=total_steps,
 )
 
 for epoch in range(epochs):
@@ -141,7 +141,7 @@ for epoch in range(epochs):
     print(f"Epoch {epoch+1}")
     print(f"Train_acc: {train_acc:.4f} Train_f1: {train_f1:.4f}")
     print(f"Val_acc: {val_acc:.4f} Val_f1: {val_f1:.4f}")
-    earlystopping(-val_acc, model, tokenizer)
+    earlystopping(-val_f1, model, tokenizer)
     print()
     if earlystopping.early_stop == True:
         break

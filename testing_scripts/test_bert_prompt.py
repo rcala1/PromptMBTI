@@ -5,9 +5,8 @@ import numpy as np
 import random
 from sklearn.metrics import f1_score, accuracy_score
 from transformers import (
-    GPT2Config,
-    GPT2ForSequenceClassification,
-    GPT2Tokenizer,
+    BertForMaskedLM,
+    BertTokenizer,
     set_seed,
 )
 from torch.nn import DataParallel
@@ -16,35 +15,38 @@ from tqdm import tqdm
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 from dataset import TRAITS
-from dataset import prepare_classic_mbti_splits
+from dataset import prepare_prompt_mbti_splits
+from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 3
+CURR_TRAIT = 0
 FEW = True
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
     + TRAITS[CURR_TRAIT]
-    + "_discrete"
+    + "_prompt"
     + ".csv"
 )
+BERT_MODEL_PATH = "bert-base-uncased"
+
 if not FEW:
-    GPT2_LOAD_PATH = (
+    BERT_LOAD_PATH = (
         "/home/rcala/PromptMBTI_Masters/models/"
-        + "gpt2"
+        + "bert"
         + "_"
         + TRAITS[CURR_TRAIT]
-        + "_classic"
+        + "_prompt"
     )
 else:
-    GPT2_LOAD_PATH = (
+    BERT_LOAD_PATH = (
         "/home/rcala/PromptMBTI_Masters/models/"
-        + "gpt2"
+        + "bert"
         + "_"
         + TRAITS[CURR_TRAIT]
-        + "_classic_few"
+        + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -52,31 +54,22 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 1
+random_seed = 123
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
 np.random.seed(random_seed)
 random.seed(random_seed)
 
-model_config = GPT2Config.from_pretrained(
-    pretrained_model_name_or_path=GPT2_LOAD_PATH, num_labels=2
-)
-tokenizer = GPT2Tokenizer.from_pretrained(pretrained_model_name_or_path=GPT2_LOAD_PATH)
-tokenizer.padding_side = "left"
-tokenizer.pad_token = tokenizer.eos_token
-
-model = GPT2ForSequenceClassification.from_pretrained(
-    pretrained_model_name_or_path=GPT2_LOAD_PATH, config=model_config
-)
-model.resize_token_embeddings(len(tokenizer))
-model.config.pad_token_id = model.config.eos_token_id
+model = BertForMaskedLM.from_pretrained(BERT_LOAD_PATH)
+tokenizer = BertTokenizer.from_pretrained(BERT_LOAD_PATH, do_lower_case=True)
 model.to(dev)
 
-batch_size = 16
+train_batch_size = 2
+test_batch_size = 1
 
-train_loader, val_loader, test_loader = prepare_classic_mbti_splits(
-    PATH_DATASET, batch_size, tokenizer, FEW
+train_loader, val_loader, test_loader = prepare_prompt_mbti_splits(
+    PATH_DATASET, train_batch_size, test_batch_size, tokenizer, "bert", CURR_TRAIT, FEW
 )
 
 model.eval()
@@ -85,16 +78,29 @@ all_true = []
 
 tqdm_test = tqdm(test_loader)
 
+
 with torch.no_grad():
-    for texts, inputs in tqdm_test:
+    i = 0
+    for idx, (prompts, inputs) in enumerate(tqdm_test):
+        i += 1
+        if i == 1000:
+            break
 
         inputs = {k: v.type(torch.long).to(dev) for k, v in inputs.items()}
 
         loss, prediction = model(**inputs)[:2]
 
         loss = loss.mean()
-        all_pred += list(prediction.cpu().detach().numpy().argmax(axis=1))
-        all_true += list(inputs["labels"].cpu().detach().numpy())
+
+        y_true, y_pred, unknown_present = get_prompt_true_pred(
+            model, tokenizer, dev, prompts, CURR_TRAIT, "bert", is_training=False
+        )
+
+        if unknown_present:
+            print(f"Unknown found at {idx}")
+
+        all_pred += y_pred
+        all_true += y_true
 
         tqdm_test.set_description("Test batch_loss: {}".format(loss.item()))
 

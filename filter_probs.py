@@ -2,7 +2,7 @@ import csv
 import pandas as pd
 from dataset import TRAITS
 
-CURR_TRAIT = 0
+CURR_TRAIT = 3
 UNFILTERED_PATH = (
     "/home/rcala/PromptMBTI_Masters/filtered/"
     + "bert_probs_"
@@ -10,10 +10,13 @@ UNFILTERED_PATH = (
     + ".csv"
 )
 FILTERED_PATH = (
-    "/home/rcala/PromptMBTI_Masters/filtered/" + "bert_filtered_" + TRAITS[CURR_TRAIT] + ".csv"
+    "/home/rcala/PromptMBTI_Masters/filtered/"
+    + "bert_filtered_"
+    + TRAITS[CURR_TRAIT]
+    + ".csv"
 )
-zero_label_threshold = [0.251, 0.142, 0.229, 0.318]
-one_label_threshold = [0.726, 0.947, 0.769, 0.767]
+zero_label_threshold = [0.251, 0.055, 0.236, 0.314]
+one_label_threshold = [0.726, 0.848, 0.763, 0.680]
 
 unfiltered_items = pd.read_csv(UNFILTERED_PATH)
 texts = list(unfiltered_items["text"])

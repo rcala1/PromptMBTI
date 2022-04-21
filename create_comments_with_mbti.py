@@ -2,9 +2,7 @@ import pandas as pd
 import math
 from tqdm import tqdm
 
-all_comments = pd.read_csv(
-    "/home/rcala/pandora/all_comments_since_2015.csv"
-)
+all_comments = pd.read_csv("/home/rcala/pandora/all_comments_since_2015.csv")
 profiles = pd.read_csv("/home/rcala/pandora/author_profiles.csv")
 
 introverted = {}
@@ -63,4 +61,6 @@ all_comments = all_comments[all_comments["perceiving"].notnull()]
 
 print("Total comments after: " + str(len(all_comments)))
 
-all_comments.to_csv("/home/rcala/PromptMBTI_Masters/datasets/all_comments_with_mbti.csv")
+all_comments.to_csv(
+    "/home/rcala/PromptMBTI_Masters/datasets/all_comments_with_mbti.csv"
+)

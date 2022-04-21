@@ -133,3 +133,6 @@ dmypy.json
 /filtered
 /models
 /dummy_files
+
+#general files
+try.py

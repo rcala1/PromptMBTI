@@ -1,6 +1,6 @@
 from dataset import TRAITS
 
-CURR_TRAIT = 0
+CURR_TRAIT = 3
 
 root = "/home/rcala/PromptMBTI_Masters/filtered/"
 file_names = [
