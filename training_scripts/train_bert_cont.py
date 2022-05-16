@@ -1,15 +1,14 @@
 import os
 import torch
+import sys
 import numpy as np
 import random
-import sys
 from random import randrange
 from sklearn.metrics import f1_score, accuracy_score
 from transformers import (
     AdamW,
-    GPT2Tokenizer,
-    GPT2LMHeadModel,
-    GPT2Config,
+    BertForMaskedLM,
+    BertTokenizer,
     get_linear_schedule_with_warmup,
     set_seed,
 )
@@ -18,9 +17,9 @@ from tqdm import tqdm
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
-from dataset import CONT_PROMPT_LENGTH
 from dataset import TRAITS
 from dataset import prepare_prompt_mbti_splits
+from dataset import CONT_PROMPT_LENGTH
 from pytorchtools import EarlyStopping
 from statistics import get_prompt_true_pred
 
@@ -33,24 +32,24 @@ PATH_DATASET = (
     + "_prompt"
     + ".csv"
 )
-GPT_MODEL_PATH = "gpt2"
+BERT_MODEL_PATH = "bert-base-uncased"
+
 if not FEW:
-    GPT2_SAVE_PATH = (
+    BERT_SAVE_PATH = (
         "/home/rcala/PromptMBTI_Masters/models/"
-        + "gpt2"
+        + "bert"
         + "_"
         + TRAITS[CURR_TRAIT]
         + "_prompt"
     )
 else:
-    GPT2_SAVE_PATH = (
+    BERT_SAVE_PATH = (
         "/home/rcala/PromptMBTI_Masters/models/"
-        + "gpt2"
+        + "bert"
         + "_"
         + TRAITS[CURR_TRAIT]
         + "_prompt_few"
     )
-
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 if torch.cuda.is_available():
@@ -67,42 +66,37 @@ set_seed(random_seed)
 np.random.seed(random_seed)
 random.seed(random_seed)
 
-tokenizer = GPT2Tokenizer.from_pretrained(
-    pretrained_model_name_or_path=GPT_MODEL_PATH, do_lower_case=True
-)
-tokenizer.do_lower_case = True
-model_config = GPT2Config.from_pretrained(pretrained_model_name_or_path=GPT_MODEL_PATH)
-tokenizer.pad_token = tokenizer.eos_token
-model = GPT2LMHeadModel.from_pretrained(
-    pretrained_model_name_or_path=GPT_MODEL_PATH, config=model_config
-)
-model.config.pad_token_id = model.config.eos_token_id
+model = BertForMaskedLM.from_pretrained(BERT_MODEL_PATH)
+tokenizer = BertTokenizer.from_pretrained(BERT_MODEL_PATH, do_lower_case=True)
+model.to(dev)
+
 org_tokens_len = len(tokenizer)
-SPECIAL_TOKENS = {
-    "additional_special_tokens": [
-        f"[CONT_{i}]" for i in range(CONT_PROMPT_LENGTH, 0, -1)
-    ]
-}
-tokenizer.add_special_tokens(SPECIAL_TOKENS)
+
+tokenizer.add_tokens(
+    [f"[CONT_{i}]" for i in range(CONT_PROMPT_LENGTH, 0, -1)], special_tokens=True
+)
+
 model.resize_token_embeddings(len(tokenizer))
+
 sampled_idxs = []
 random.seed(1)
 for i in range(1, CONT_PROMPT_LENGTH + 1):
     sampled_org_tok_idx = randrange(org_tokens_len)
     sampled_idxs += [sampled_org_tok_idx]
-    sampled_org_tok_embd = model.transformer.wte.weight[sampled_org_tok_idx, :]
-    model.transformer.wte.weight.data[-i, :] = sampled_org_tok_embd
+    sampled_org_tok_embd = model.bert.embeddings.word_embeddings.weight[
+        sampled_org_tok_idx, :
+    ]
+    model.bert.embeddings.word_embeddings.weight.data[-i, :] = sampled_org_tok_embd
 random.seed(random_seed)
-model.to(dev)
 
-optimizer = AdamW([model.transformer.wte.weight], lr=2e-5)
-earlystopping = EarlyStopping(patience=2, path=GPT2_SAVE_PATH)
+earlystopping = EarlyStopping(patience=2, path=BERT_SAVE_PATH)
+optimizer = AdamW([model.bert.embeddings.word_embeddings.weight], lr=1e5)
 epochs = 6
 train_batch_size = 2
 test_batch_size = 1
 
 train_loader, val_loader, test_loader = prepare_prompt_mbti_splits(
-    PATH_DATASET, train_batch_size, test_batch_size, tokenizer, "gpt2", CURR_TRAIT, FEW
+    PATH_DATASET, train_batch_size, test_batch_size, tokenizer, "bert", CURR_TRAIT, FEW
 )
 
 total_steps = len(train_loader) * epochs
@@ -127,12 +121,13 @@ for epoch in range(epochs):
 
         loss = loss.mean()
         loss.backward()
-        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
-        model.transformer.wte.weight.grad[:-30, :] = 0
+        model.bert.embeddings.word_embeddings.weight.grad[:-30, :] = 0
 
         optimizer.step()
         scheduler.step()
+
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
         tqdm_train.set_description(
             "Epoch {}, Train batch_loss: {}".format(epoch + 1, loss.item(),)
@@ -145,6 +140,7 @@ for epoch in range(epochs):
     tqdm_val = tqdm(val_loader)
 
     with torch.no_grad():
+
         for empty_prompts, labels, prompts, inputs in tqdm_val:
 
             inputs = {k: v.type(torch.long).to(dev) for k, v in inputs.items()}
@@ -161,7 +157,7 @@ for epoch in range(epochs):
                 labels,
                 prompts,
                 CURR_TRAIT,
-                "gpt2",
+                "bert",
                 is_training=False,
             )
             all_pred += y_pred

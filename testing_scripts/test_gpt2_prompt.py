@@ -20,7 +20,7 @@ from dataset import prepare_prompt_mbti_splits
 from statistics import get_prompt_true_pred
 
 CURR_TRAIT = 0
-FEW = True
+FEW = False
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -45,7 +45,7 @@ else:
         + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -88,11 +88,7 @@ tqdm_test = tqdm(test_loader)
 
 with torch.no_grad():
 
-    i = 0
-    for idx, (prompts, inputs) in enumerate(tqdm_test):
-        i += 1
-        if i == 1000:
-            break
+    for idx, (empty_prompts, labels, prompts, inputs) in enumerate(tqdm_test):
 
         inputs = {k: v.type(torch.long).to(dev) for k, v in inputs.items()}
 
@@ -101,7 +97,15 @@ with torch.no_grad():
         loss = loss.mean()
 
         y_true, y_pred, unknown_present = get_prompt_true_pred(
-            model, tokenizer, dev, prompts, CURR_TRAIT, "gpt2", is_training=False
+            model,
+            tokenizer,
+            dev,
+            empty_prompts,
+            labels,
+            prompts,
+            CURR_TRAIT,
+            "gpt2",
+            is_training=False,
         )
 
         if unknown_present:

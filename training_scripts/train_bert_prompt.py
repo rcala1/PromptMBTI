@@ -16,13 +16,12 @@ from tqdm import tqdm
 
 sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
-from dataset import FEW_VAL_NUM_EXAMPLES
 from dataset import TRAITS
 from dataset import prepare_prompt_mbti_splits
 from pytorchtools import EarlyStopping
 from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 1
+CURR_TRAIT = 3
 FEW = False
 
 PATH_DATASET = (
@@ -84,18 +83,13 @@ scheduler = get_linear_schedule_with_warmup(
     optimizer, num_warmup_steps=0, num_training_steps=total_steps,
 )
 
-if FEW:
-    global_unknown_present = True
-else:
-    global_unknown_present = False
-
 for epoch in range(epochs):
 
     model.train()
 
     tqdm_train = tqdm(train_loader)
 
-    for prompts, inputs in tqdm_train:
+    for empty_prompts, labels, prompts, inputs in tqdm_train:
 
         optimizer.zero_grad()
         model.zero_grad()
@@ -121,11 +115,9 @@ for epoch in range(epochs):
 
     tqdm_val = tqdm(val_loader)
 
-    local_unknown_present = []
-
     with torch.no_grad():
 
-        for prompts, inputs in tqdm_val:
+        for empty_prompts, labels, prompts, inputs in tqdm_val:
 
             inputs = {k: v.type(torch.long).to(dev) for k, v in inputs.items()}
 
@@ -133,12 +125,19 @@ for epoch in range(epochs):
 
             loss = loss.mean()
 
-            y_true, y_pred, unknown_present = get_prompt_true_pred(
-                model, tokenizer, dev, prompts, CURR_TRAIT, "bert", is_training=False
+            y_true, y_pred, _ = get_prompt_true_pred(
+                model,
+                tokenizer,
+                dev,
+                empty_prompts,
+                labels,
+                prompts,
+                CURR_TRAIT,
+                "bert",
+                is_training=False,
             )
             all_pred += y_pred
             all_true += y_true
-            local_unknown_present += [unknown_present]
 
             tqdm_val.set_description(
                 "Epoch {}, Val batch_loss: {}".format(epoch + 1, loss.item())
@@ -147,19 +146,9 @@ for epoch in range(epochs):
     val_acc = accuracy_score(all_true, all_pred)
     val_f1 = f1_score(all_true, all_pred, average="macro")
 
-    if FEW:
-        if (
-            sum(local_unknown_present) / FEW_VAL_NUM_EXAMPLES < 0.15
-            and global_unknown_present
-        ):
-            global_unknown_present = False
-
     print(f"Epoch {epoch+1}")
     print(f"Val_acc: {val_acc:.4f} Val_f1: {val_f1:.4f}")
-    if global_unknown_present == False:
-        earlystopping(-val_f1, model, tokenizer)
-    elif global_unknown_present == True and epoch == epochs - 1:
-        earlystopping(-val_f1, model, tokenizer)
+    earlystopping(-val_f1, model, tokenizer)
     print()
     if earlystopping.early_stop == True:
         break

@@ -1,4 +1,3 @@
-from click import pass_context
 import torch
 import pandas as pd
 from torch.utils.data import DataLoader
@@ -7,11 +6,10 @@ from collections import Counter
 TRAITS = ["introverted", "intuitive", "thinking", "perceiving"]
 OPPOSITE_TRAITS = ["extroverted", "sensing", "feeling", "judging"]
 
-PREFIX_PROMPT = "Text :"
-MID_PROMPT = "MBTI :"
-
 FEW_TRAIN_NUM_EXAMPLES = 48
 FEW_VAL_NUM_EXAMPLES = 16
+
+CONT_PROMPT_LENGTH = 30
 
 true2prompt = {
     "introverted": "introverted",
@@ -34,6 +32,9 @@ prompt2true = {
     "perceiving": "perceiving",
     "judging": "judging",
 }
+
+PREFIX_PROMPT = ""
+MID_PROMPT = ""
 
 
 class MBTITraitDataset(torch.utils.data.Dataset):
@@ -221,7 +222,7 @@ def collate_gpt2_prompt_mbti(samples, tokenizer):
 
     prompts_inputs.update({"labels": labels_inputs})
 
-    return prompts, prompts_inputs
+    return empty_prompts, labels, prompts, prompts_inputs
 
 
 def collate_bert_prompt_mbti(samples, tokenizer, trait):
@@ -270,7 +271,7 @@ def collate_bert_prompt_mbti(samples, tokenizer, trait):
 
     prompts_inputs.update({"labels": labels_inputs})
 
-    return prompts, prompts_inputs
+    return empty_prompts, labels, prompts, prompts_inputs
 
 
 def prepare_prompt_mbti_splits(
@@ -285,9 +286,33 @@ def prepare_prompt_mbti_splits(
     trait_column = filtered_texts_with_mbti.columns[1]
     labels = list(filtered_texts_with_mbti[trait_column])
 
-    empty_prompts = [
-        PREFIX_PROMPT + " " + text + " " + MID_PROMPT + " " for text in texts
-    ]
+    # Text : [text] MBTI : [trait_label]
+    # empty_prompts = [
+    #    PREFIX_PROMPT + " " + text + " " + MID_PROMPT + " " for text in texts
+    # ]
+
+    # [text] Based on the previous text , the person is of MBTI personality trait [trait_label]
+    # [text] Question : What is the MBTI personality trait of the person in the previous text ? Answer: [trait_label]
+    # empty_prompts = [text + " " + MID_PROMPT + " " for text in texts]
+
+    # [text] [trait_label]
+    empty_prompts = [text + " " for text in texts]
+
+    # [text] [two_personalities] ? [trait_label]
+    # empty_prompts = [
+    #    text
+    #    + " "
+    #    + f"{true2prompt[TRAITS[trait]]} or {true2prompt[OPPOSITE_TRAITS[trait]]}?"
+    #    + " "
+    #    for text in texts
+    # ]
+
+    # continuous prompt
+    # empty_prompts = []
+    # for text in texts:
+    #    for i in range(CONT_PROMPT_LENGTH, 0, -1):
+    #        text = f"[CONT_{i}] " + text
+    #    empty_prompts += [text]
 
     if model_name == "bert":
         collate_fun = lambda samples: collate_bert_prompt_mbti(

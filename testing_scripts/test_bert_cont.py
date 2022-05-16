@@ -78,7 +78,6 @@ all_true = []
 
 tqdm_test = tqdm(test_loader)
 
-
 with torch.no_grad():
     for idx, (empty_prompts, labels, prompts, inputs) in enumerate(tqdm_test):
 

@@ -1,5 +1,4 @@
 import torch
-import random
 import math
 from dataset import MID_PROMPT
 from dataset import prompt2true, true2prompt, TRAITS, OPPOSITE_TRAITS
@@ -19,36 +18,60 @@ def rreplace(s, old, new, occurrence):
 
 
 def get_prompt_true_pred(
-    model, tokenizer, dev, prompts, trait, model_name, is_training=False
+    model,
+    tokenizer,
+    dev,
+    prompts_without_labels,
+    true_labels,
+    prompts,
+    trait,
+    model_name,
+    is_training=False,
 ):
     if model_name == "gpt2":
         y_true, y_pred, unknown_present = get_labels_prompts_gpt2(
-            model, tokenizer, dev, prompts, trait, is_training
+            model,
+            tokenizer,
+            dev,
+            prompts_without_labels,
+            true_labels,
+            prompts,
+            trait,
+            is_training,
         )
     else:
         y_true, y_pred, unknown_present = get_labels_prompts_bert(
-            model, tokenizer, dev, prompts, trait, is_training
+            model,
+            tokenizer,
+            dev,
+            prompts_without_labels,
+            true_labels,
+            prompts,
+            trait,
+            is_training,
         )
 
     return y_true, y_pred, unknown_present
 
 
-def get_labels_prompts_gpt2(model, tokenizer, dev, prompts, trait, is_training=False):
+def get_labels_prompts_gpt2(
+    model,
+    tokenizer,
+    dev,
+    prompts_without_labels,
+    true_labels,
+    prompts,
+    trait,
+    is_training=False,
+):
 
     if is_training:
         model.eval()
 
-    true_labels = [
-        prompt[prompt.find(MID_PROMPT) + len(MID_PROMPT) :].split()[0]
-        for prompt in prompts
-    ]
-
-    if true2prompt.get(true_labels[0]) not in traits2class_dicts[trait]:
-        return [], [], True
-
-    prompts_without_labels = [
-        rreplace(item[0], item[1], "", 1) for item in zip(prompts, true_labels)
-    ]
+    # [text] [two_personalities] ? [trait_label]
+    # MID_PROMPT = (
+    #    f"{true2prompt[TRAITS[trait]]} or {true2prompt[OPPOSITE_TRAITS[trait]]}?"
+    # )
 
     prompts_without_labels[0] = prompts_without_labels[0][:-1]
 
@@ -123,9 +146,18 @@ def get_labels_prompts_gpt2(model, tokenizer, dev, prompts, trait, is_training=F
         inputs["input_ids"][0], skip_special_tokens=True
     )
     real_output += [predicted_prompt]
+
+    # non null prompts
+    # splitted = predicted_prompt[
+    #    predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
+    # ].split()
+
+    # [text] [trait_label] and continous prompt
     splitted = predicted_prompt[
-        predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
+        predicted_prompt.find(prompts_without_labels[0].lower())
+        + len(prompts_without_labels[0].lower()) :
     ].split()
+
     if len(splitted) > 0:
         pred_label = splitted[0].lower()
     else:
@@ -155,22 +187,24 @@ def get_labels_prompts_gpt2(model, tokenizer, dev, prompts, trait, is_training=F
     return true_labels_discrete, pred_labels_discrete, False
 
 
-def get_labels_prompts_bert(model, tokenizer, dev, prompts, trait, is_training=False):
+def get_labels_prompts_bert(
+    model,
+    tokenizer,
+    dev,
+    prompts_without_labels,
+    true_labels,
+    prompts,
+    trait,
+    is_training=False,
+):
 
     if is_training:
         model.eval()
 
-    true_labels = [
-        prompt[prompt.find(MID_PROMPT) + len(MID_PROMPT) :].split()[0]
-        for prompt in prompts
-    ]
-
-    if true2prompt.get(true_labels[0]) not in traits2class_dicts[trait]:
-        return [], [], True
-
-    prompts_without_labels = [
-        rreplace(item[0], item[1], "", 1) for item in zip(prompts, true_labels)
-    ]
+    # [text] [two_personalities] ? [trait_label]
+    # MID_PROMPT = (
+    #    f"{true2prompt[TRAITS[trait]]} or {true2prompt[OPPOSITE_TRAITS[trait]]}?"
+    # )
 
     prompts_without_labels_wo_unk = []
     for prompt in prompts_without_labels:
@@ -254,9 +288,18 @@ def get_labels_prompts_bert(model, tokenizer, dev, prompts, trait, is_training=F
     pred_labels = []
 
     predicted_prompt = tokenizer.decode(masked_inputs["input_ids"][0])
+
+    # non null prompts
+    # splitted = predicted_prompt[
+    #    predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
+    # ].split()
+
+    # [text] [trait_label] and continous prompt
     splitted = predicted_prompt[
-        predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
+        predicted_prompt.find(prompts_without_labels[0].lower())
+        + len(prompts_without_labels[0].lower()) :
     ].split()
+
     if len(splitted) > 0:
         pred_label = splitted[0].lower()
     else:
