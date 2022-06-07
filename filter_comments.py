@@ -59,7 +59,7 @@ for item in tqdm(filtered_items):
 
 filtered_items = filtered_from_generic_items
 
-# foreign
+# natural
 no_foreign = []
 for item in tqdm(filtered_items):
 

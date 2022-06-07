@@ -60,7 +60,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 12
+random_seed = 1
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)

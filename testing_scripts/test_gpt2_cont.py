@@ -19,7 +19,7 @@ from dataset import TRAITS
 from dataset import prepare_prompt_mbti_splits
 from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 3
+CURR_TRAIT = 2
 FEW = True
 
 PATH_DATASET = (
@@ -45,7 +45,7 @@ else:
         + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -53,7 +53,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 12
+random_seed = 1
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
