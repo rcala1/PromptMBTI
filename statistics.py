@@ -125,7 +125,7 @@ def get_labels_prompts_gpt2(
 
         decoding_indices = torch.tensor(decoding_indices)
         decoding_indices_oh = torch.nn.functional.one_hot(
-            decoding_indices, tokenizer.vocab_size
+            decoding_indices, len(tokenizer)
         )
 
         mask_unimportant = torch.sum(decoding_indices_oh, 0) == 0
@@ -153,9 +153,10 @@ def get_labels_prompts_gpt2(
     # ].split()
 
     # [text] [trait_label] and continous prompt
+    template_encoded = tokenizer.encode(prompts_without_labels[0] + " ")
+    template_decoded = tokenizer.decode(template_encoded, skip_special_tokens=True)
     splitted = predicted_prompt[
-        predicted_prompt.find(prompts_without_labels[0].lower())
-        + len(prompts_without_labels[0].lower()) :
+        predicted_prompt.find(template_decoded) + len(template_decoded) :
     ].split()
 
     if len(splitted) > 0:
@@ -276,7 +277,7 @@ def get_labels_prompts_bert(
 
         decoding_indices = torch.tensor(decoding_indices)
         decoding_indices_oh = torch.nn.functional.one_hot(
-            decoding_indices, len(tokenizer.vocab)
+            decoding_indices, len(tokenizer)
         )
 
         mask_unimportant = torch.sum(decoding_indices_oh, 0) == 0
@@ -295,9 +296,11 @@ def get_labels_prompts_bert(
     # ].split()
 
     # [text] [trait_label] and continous prompt
+    template_encoded = tokenizer.encode(prompts_without_labels[0])
+    template_decoded = tokenizer.decode(template_encoded)
+    template_decoded = rreplace(template_decoded, "[SEP]", "", 1)
     splitted = predicted_prompt[
-        predicted_prompt.find(prompts_without_labels[0].lower())
-        + len(prompts_without_labels[0].lower()) :
+        predicted_prompt.find(template_decoded) + len(template_decoded) :
     ].split()
 
     if len(splitted) > 0:

@@ -20,7 +20,7 @@ from dataset import prepare_prompt_mbti_splits
 from statistics import get_prompt_true_pred
 
 CURR_TRAIT = 0
-FEW = False
+FEW = True
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -53,7 +53,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 123
+random_seed = 1
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)

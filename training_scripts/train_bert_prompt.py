@@ -22,7 +22,7 @@ from pytorchtools import EarlyStopping
 from statistics import get_prompt_true_pred
 
 CURR_TRAIT = 3
-FEW = False
+FEW = True
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -49,7 +49,7 @@ else:
         + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -57,7 +57,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 123
+random_seed = 1
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
@@ -68,9 +68,9 @@ model = BertForMaskedLM.from_pretrained(BERT_MODEL_PATH)
 tokenizer = BertTokenizer.from_pretrained(BERT_MODEL_PATH, do_lower_case=True)
 model.to(dev)
 
-earlystopping = EarlyStopping(patience=2, path=BERT_SAVE_PATH)
+earlystopping = EarlyStopping(patience=5, path=BERT_SAVE_PATH)
 optimizer = AdamW(model.parameters(), lr=1e-5)
-epochs = 6
+epochs = 100
 train_batch_size = 2
 test_batch_size = 1
 

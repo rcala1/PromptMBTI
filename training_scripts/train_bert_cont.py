@@ -23,8 +23,8 @@ from dataset import CONT_PROMPT_LENGTH
 from pytorchtools import EarlyStopping
 from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 0
-FEW = False
+CURR_TRAIT = 3
+FEW = True
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -59,7 +59,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 123
+random_seed = 1
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
@@ -72,10 +72,9 @@ model.to(dev)
 
 org_tokens_len = len(tokenizer)
 
-tokenizer.add_tokens(
-    [f"[CONT_{i}]" for i in range(CONT_PROMPT_LENGTH, 0, -1)], special_tokens=True
-)
-
+special_tokens_list = [f"[CONT_{i}]" for i in range(CONT_PROMPT_LENGTH, 0, -1)]
+special_tokens_dict = {"additional_special_tokens": special_tokens_list}
+tokenizer.add_special_tokens(special_tokens_dict)
 model.resize_token_embeddings(len(tokenizer))
 
 sampled_idxs = []
@@ -89,9 +88,9 @@ for i in range(1, CONT_PROMPT_LENGTH + 1):
     model.bert.embeddings.word_embeddings.weight.data[-i, :] = sampled_org_tok_embd
 random.seed(random_seed)
 
-earlystopping = EarlyStopping(patience=2, path=BERT_SAVE_PATH)
-optimizer = AdamW([model.bert.embeddings.word_embeddings.weight], lr=1e5)
-epochs = 6
+earlystopping = EarlyStopping(patience=5, path=BERT_SAVE_PATH)
+optimizer = AdamW([model.bert.embeddings.word_embeddings.weight], lr=7.5e-5)
+epochs = 100
 train_batch_size = 2
 test_batch_size = 1
 
@@ -122,7 +121,7 @@ for epoch in range(epochs):
         loss = loss.mean()
         loss.backward()
 
-        model.bert.embeddings.word_embeddings.weight.grad[:-30, :] = 0
+        model.bert.embeddings.word_embeddings.weight.grad[:-CONT_PROMPT_LENGTH, :] = 0
 
         optimizer.step()
         scheduler.step()

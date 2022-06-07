@@ -1,7 +1,6 @@
 import torch
 import pandas as pd
 from torch.utils.data import DataLoader
-from collections import Counter
 
 TRAITS = ["introverted", "intuitive", "thinking", "perceiving"]
 OPPOSITE_TRAITS = ["extroverted", "sensing", "feeling", "judging"]
@@ -9,7 +8,7 @@ OPPOSITE_TRAITS = ["extroverted", "sensing", "feeling", "judging"]
 FEW_TRAIN_NUM_EXAMPLES = 48
 FEW_VAL_NUM_EXAMPLES = 16
 
-CONT_PROMPT_LENGTH = 30
+CONT_PROMPT_LENGTH = 100
 
 true2prompt = {
     "introverted": "introverted",
@@ -296,7 +295,7 @@ def prepare_prompt_mbti_splits(
     # empty_prompts = [text + " " + MID_PROMPT + " " for text in texts]
 
     # [text] [trait_label]
-    empty_prompts = [text + " " for text in texts]
+    # empty_prompts = [text + " " for text in texts]
 
     # [text] [two_personalities] ? [trait_label]
     # empty_prompts = [
@@ -308,11 +307,11 @@ def prepare_prompt_mbti_splits(
     # ]
 
     # continuous prompt
-    # empty_prompts = []
-    # for text in texts:
-    #    for i in range(CONT_PROMPT_LENGTH, 0, -1):
-    #        text = f"[CONT_{i}] " + text
-    #    empty_prompts += [text]
+    empty_prompts = []
+    for text in texts:
+        for i in range(CONT_PROMPT_LENGTH, 0, -1):
+            text = f"[CONT_{i}] " + text
+        empty_prompts += [text + " "]
 
     if model_name == "bert":
         collate_fun = lambda samples: collate_bert_prompt_mbti(

@@ -24,8 +24,8 @@ from dataset import prepare_prompt_mbti_splits
 from pytorchtools import EarlyStopping
 from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 0
-FEW = False
+CURR_TRAIT = 3
+FEW = True
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -60,7 +60,7 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 123
+random_seed = 12
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
@@ -95,9 +95,9 @@ for i in range(1, CONT_PROMPT_LENGTH + 1):
 random.seed(random_seed)
 model.to(dev)
 
-optimizer = AdamW([model.transformer.wte.weight], lr=2e-5)
-earlystopping = EarlyStopping(patience=2, path=GPT2_SAVE_PATH)
-epochs = 6
+optimizer = AdamW([model.transformer.wte.weight], lr=7.5e-5)
+earlystopping = EarlyStopping(patience=5, path=GPT2_SAVE_PATH)
+epochs = 100
 train_batch_size = 2
 test_batch_size = 1
 
@@ -129,7 +129,7 @@ for epoch in range(epochs):
         loss.backward()
         # torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
 
-        model.transformer.wte.weight.grad[:-30, :] = 0
+        model.transformer.wte.weight.grad[:-CONT_PROMPT_LENGTH, :] = 0
 
         optimizer.step()
         scheduler.step()
