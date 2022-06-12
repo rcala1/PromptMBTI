@@ -19,8 +19,8 @@ from dataset import TRAITS
 from dataset import prepare_prompt_mbti_splits
 from statistics import get_prompt_true_pred
 
-CURR_TRAIT = 0
-FEW = True
+CURR_TRAIT = 3
+FEW = False
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -28,6 +28,7 @@ PATH_DATASET = (
     + "_prompt"
     + ".csv"
 )
+GPT_MODEL_PATH = "gpt2"
 if not FEW:
     GPT2_LOAD_PATH = (
         "/home/rcala/PromptMBTI_Masters/models/"
@@ -45,7 +46,7 @@ else:
         + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -53,22 +54,36 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 1
+random_seed = 123
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
 np.random.seed(random_seed)
 random.seed(random_seed)
 
+# zero
 tokenizer = GPT2Tokenizer.from_pretrained(
-    pretrained_model_name_or_path=GPT2_LOAD_PATH, do_lower_case=True
+    pretrained_model_name_or_path=GPT_MODEL_PATH, do_lower_case=True
 )
 tokenizer.do_lower_case = True
-model_config = GPT2Config.from_pretrained(pretrained_model_name_or_path=GPT2_LOAD_PATH)
+model_config = GPT2Config.from_pretrained(pretrained_model_name_or_path=GPT_MODEL_PATH)
 tokenizer.pad_token = tokenizer.eos_token
 model = GPT2LMHeadModel.from_pretrained(
-    pretrained_model_name_or_path=GPT2_LOAD_PATH, config=model_config
+    pretrained_model_name_or_path=GPT_MODEL_PATH, config=model_config
 )
+
+
+# full, few
+# tokenizer = GPT2Tokenizer.from_pretrained(
+#    pretrained_model_name_or_path=GPT2_LOAD_PATH, do_lower_case=True
+# )
+# tokenizer.do_lower_case = True
+# model_config = GPT2Config.from_pretrained(pretrained_model_name_or_path=GPT2_LOAD_PATH)
+# tokenizer.pad_token = tokenizer.eos_token
+# model = GPT2LMHeadModel.from_pretrained(
+#    pretrained_model_name_or_path=GPT2_LOAD_PATH, config=model_config
+# )
+
 model.resize_token_embeddings(len(tokenizer))
 model.config.pad_token_id = model.config.eos_token_id
 model.to(dev)

@@ -295,7 +295,7 @@ def prepare_prompt_mbti_splits(
     # empty_prompts = [text + " " + MID_PROMPT + " " for text in texts]
 
     # [text] [trait_label]
-    # empty_prompts = [text + " " for text in texts]
+    empty_prompts = [text + " " for text in texts]
 
     # [text] [two_personalities] ? [trait_label]
     # empty_prompts = [
@@ -307,11 +307,11 @@ def prepare_prompt_mbti_splits(
     # ]
 
     # continuous prompt
-    empty_prompts = []
-    for text in texts:
-        for i in range(CONT_PROMPT_LENGTH, 0, -1):
-            text = f"[CONT_{i}] " + text
-        empty_prompts += [text + " "]
+    # empty_prompts = []
+    # for text in texts:
+    #    for i in range(CONT_PROMPT_LENGTH, 0, -1):
+    #        text = f"[CONT_{i}] " + text
+    #    empty_prompts += [text + " "]
 
     if model_name == "bert":
         collate_fun = lambda samples: collate_bert_prompt_mbti(

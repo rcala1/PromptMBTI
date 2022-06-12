@@ -1,6 +1,5 @@
 import torch
 import math
-from dataset import MID_PROMPT
 from dataset import prompt2true, true2prompt, TRAITS, OPPOSITE_TRAITS
 
 
@@ -67,11 +66,6 @@ def get_labels_prompts_gpt2(
 
     if is_training:
         model.eval()
-
-    # [text] [two_personalities] ? [trait_label]
-    # MID_PROMPT = (
-    #    f"{true2prompt[TRAITS[trait]]} or {true2prompt[OPPOSITE_TRAITS[trait]]}?"
-    # )
 
     prompts_without_labels[0] = prompts_without_labels[0][:-1]
 
@@ -147,12 +141,6 @@ def get_labels_prompts_gpt2(
     )
     real_output += [predicted_prompt]
 
-    # non null prompts
-    # splitted = predicted_prompt[
-    #    predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
-    # ].split()
-
-    # [text] [trait_label] and continous prompt
     template_encoded = tokenizer.encode(prompts_without_labels[0] + " ")
     template_decoded = tokenizer.decode(template_encoded, skip_special_tokens=True)
     splitted = predicted_prompt[
@@ -201,11 +189,6 @@ def get_labels_prompts_bert(
 
     if is_training:
         model.eval()
-
-    # [text] [two_personalities] ? [trait_label]
-    # MID_PROMPT = (
-    #    f"{true2prompt[TRAITS[trait]]} or {true2prompt[OPPOSITE_TRAITS[trait]]}?"
-    # )
 
     prompts_without_labels_wo_unk = []
     for prompt in prompts_without_labels:
@@ -290,12 +273,6 @@ def get_labels_prompts_bert(
 
     predicted_prompt = tokenizer.decode(masked_inputs["input_ids"][0])
 
-    # non null prompts
-    # splitted = predicted_prompt[
-    #    predicted_prompt.find(MID_PROMPT.lower()) + len(MID_PROMPT.lower()) :
-    # ].split()
-
-    # [text] [trait_label] and continous prompt
     template_encoded = tokenizer.encode(prompts_without_labels[0])
     template_decoded = tokenizer.decode(template_encoded)
     template_decoded = rreplace(template_decoded, "[SEP]", "", 1)

@@ -19,7 +19,7 @@ from dataset import prepare_prompt_mbti_splits
 from statistics import get_prompt_true_pred
 
 CURR_TRAIT = 3
-FEW = True
+FEW = False
 
 PATH_DATASET = (
     "/home/rcala/PromptMBTI_Masters/filtered/bert_filtered_"
@@ -46,7 +46,7 @@ else:
         + "_prompt_few"
     )
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 if torch.cuda.is_available():
     dev = torch.device("cuda:0")
     print("Running on the GPU")
@@ -54,15 +54,21 @@ else:
     dev = torch.device("cpu")
     print("Running on the CPU")
 
-random_seed = 1
+random_seed = 123
 
 torch.manual_seed(random_seed)
 set_seed(random_seed)
 np.random.seed(random_seed)
 random.seed(random_seed)
 
-model = BertForMaskedLM.from_pretrained(BERT_LOAD_PATH)
-tokenizer = BertTokenizer.from_pretrained(BERT_LOAD_PATH, do_lower_case=True)
+# zero
+model = BertForMaskedLM.from_pretrained(BERT_MODEL_PATH)
+tokenizer = BertTokenizer.from_pretrained(BERT_MODEL_PATH, do_lower_case=True)
+
+# full, few
+# model = BertForMaskedLM.from_pretrained(BERT_LOAD_PATH)
+# tokenizer = BertTokenizer.from_pretrained(BERT_LOAD_PATH, do_lower_case=True)
+
 model.to(dev)
 
 train_batch_size = 2
